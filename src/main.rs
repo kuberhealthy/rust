@@ -1,42 +1,19 @@
-use reqwest::blocking::Client;
-use serde::Serialize;
 use std::{env, error::Error};
 
-#[derive(Serialize)]
-struct Report {
-    #[serde(rename = "Errors")]
-    errors: Vec<String>,
-    #[serde(rename = "OK")]
-    ok: bool,
-}
+use kuberhealthy_client::KuberhealthyClient;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Fetch environment variables injected by Kuberhealthy.
-    let reporting_url = env::var("KH_REPORTING_URL").expect("KH_REPORTING_URL must be set");
-    let run_uuid = env::var("KH_RUN_UUID").expect("KH_RUN_UUID must be set");
+    let client = KuberhealthyClient::from_env()?;
 
     // Placeholder for your own check logic.
     // Pass --fail to simulate a failure.
     let ok = env::args().find(|a| a == "--fail").is_none();
 
-    let report = if ok {
-        Report {
-            errors: vec![],
-            ok: true,
-        }
+    if ok {
+        client.report_success()?;
     } else {
-        Report {
-            errors: vec!["example failure".into()],
-            ok: false,
-        }
-    };
-
-    Client::new()
-        .post(&reporting_url)
-        .header("kh-run-uuid", run_uuid)
-        .json(&report)
-        .send()?
-        .error_for_status()?;
+        client.report_failure(vec!["example failure"])?;
+    }
 
     Ok(())
 }

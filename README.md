@@ -1,14 +1,39 @@
-# Rust Kuberhealthy Client Example
+# Rust Kuberhealthy Client and Example
 
-This directory contains a minimal Rust application that reports the result of a check back to [Kuberhealthy](https://github.com/kuberhealthy/kuberhealthy).
-The program reads the `KH_REPORTING_URL` and `KH_RUN_UUID` environment variables provided to every check pod and posts a JSON
-report with the header `kh-run-uuid`.
+This repository provides a minimal library and example check for reporting results back to [Kuberhealthy](https://github.com/kuberhealthy/kuberhealthy).
+The reusable client library now lives in the [`kuberhealthy-client`](./kuberhealthy-client) subcrate and can be imported into your own Rust programs. The repository root contains the `kuberhealthy-example` binary, which demonstrates how to use the client in a check container.
+
+## Using the client library
+
+Add the crate to your `Cargo.toml`:
+
+```toml
+[dependencies]
+kuberhealthy-client = "0.1"
+```
+
+Example usage:
+
+```rust
+use kuberhealthy_client::KuberhealthyClient;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = KuberhealthyClient::from_env()?;
+    // Perform check logic here...
+    client.report_success()?;
+    Ok(())
+}
+```
+
+The client reads the `KH_REPORTING_URL` and `KH_RUN_UUID` environment variables provided to every check pod and posts a JSON report with the `kh-run-uuid` header.
+
+## Example check
 
 Run without arguments to report success or with `--fail` to report a failure.
 
 ```bash
-KH_REPORTING_URL="http://localhost" KH_RUN_UUID="test" cargo run
-KH_REPORTING_URL="http://localhost" KH_RUN_UUID="test" cargo run -- --fail
+KH_REPORTING_URL="http://localhost" KH_RUN_UUID="test" cargo run --bin kuberhealthy-example
+KH_REPORTING_URL="http://localhost" KH_RUN_UUID="test" cargo run --bin kuberhealthy-example -- --fail
 ```
 
 ## Build and push
@@ -45,3 +70,8 @@ Apply the resource to any cluster where Kuberhealthy is running:
 ```bash
 kubectl apply -f khcheck.yaml
 ```
+
+## Continuous integration and releases
+
+A GitHub Actions workflow builds the example container on every change. When a release is published, another workflow publishes the `kuberhealthy-client` crate from the subdirectory and pushes the example container image to the GitHub Container Registry.
+
